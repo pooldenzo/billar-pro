@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Billar Pro</title>
+  <meta name="theme-color" content="#09100c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Billar Pro">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* ── Safe area (notch / Dynamic Island / gesture bar) ── */
+    :root {
+      --sat: env(safe-area-inset-top,    0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left,   0px);
+      --sar: env(safe-area-inset-right,  0px);
+    }
+
+    :root {
+      --felt:        #0d5c2e;
+      --felt-light:  #177a40;
+      --felt-dark:   #083d1e;
+      --gold:        #d4a432;
+      --gold-light:  #f0c040;
+      --accent:      #00cfff;
+      --bg:          #09100c;
+      --surface:     #111811;
+      --surface2:    #192219;
+      --border:      rgba(255,255,255,0.07);
+      --text:        #e8ede8;
+      --text-muted:  #5a7060;
+      --red:         #e54444;
+      --red-soft:    rgba(229,68,68,0.15);
+      --win-green:   #00ff88;
+      --radius:      14px;
+    }
+
+    [data-theme="light"] {
+      --bg:         #ddeedd;
+      --surface:    #c8dcc8;
+      --surface2:   #b8ccb8;
+      --border:     rgba(0,0,0,0.09);
+      --text:       #0a140a;
+      --text-muted: #3a5a3a;
+      --felt:       #2e7d52;
+      --felt-dark:  #1a5c36;
+      --felt-light: #3a9960;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0; padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      /* Prevent pull-to-refresh and overscroll glow on Android */
+      overscroll-behavior: none;
+    }
+
+    /* Push content clear of the status bar and home indicator */
+    .game-topbar  { padding-top:    calc(8px  + var(--sat)); }
+    .setup-hero   { padding-top:    calc(48px + var(--sat)); }
+    .action-bar   { padding-bottom: calc(9px  + var(--sab)); }
+    .hist-header  { padding-top:    calc(12px + var(--sat)); }
+
+    /* ── SCREENS ── */
+    .screen {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      opacity: 0; pointer-events: none;
+      transform: translateY(16px);
+      transition: opacity .28s ease, transform .28s ease;
+    }
+    .screen.active { opacity: 1; pointer-events: all; transform: none; }
+
+    /* ────────────────────────────── SETUP ─── */
+    .setup-hero {
+      background: linear-gradient(160deg, var(--felt-dark) 0%, var(--felt) 100%);
+      padding: 48px 24px 36px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .setup-hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.06), transparent 70%);
+    }
+    .hero-ball { font-size: 3.2rem; margin-bottom: 10px; display: block; }
+    .setup-hero h1 {
+      font-size: 2.2rem; font-weight: 900;
+      letter-spacing: 3px; color: var(--gold-light);
+      text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+    .setup-hero .tagline {
+      color: rgba(255,255,255,0.5);
+      font-size: .8rem; margin-top: 5px; letter-spacing: .5px;
+    }
+
+    .setup-body { padding: 24px; display: flex; flex-direction: column; gap: 22px; }
+
+    .field-label {
+      font-size: .7rem; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text-muted);
+      margin-bottom: 6px; display: block;
+    }
+    .field-input {
+      background: var(--surface2); border: 1.5px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px;
+      font-size: 1rem; color: var(--text);
+      outline: none; transition: border-color .2s; width: 100%;
+      -webkit-appearance: none;
+    }
+    .field-input:focus { border-color: var(--felt-light); }
+
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .mode-card {
+      background: var(--surface2); border: 2px solid var(--border);
+      border-radius: var(--radius); padding: 18px 12px;
+      cursor: pointer; transition: all .2s; text-align: center;
+    }
+    .mode-card.selected {
+      border-color: var(--gold);
+      background: rgba(212,164,50,.1);
+      box-shadow: 0 0 0 1px rgba(212,164,50,.2);
+    }
+    .mode-card .mc-icon { font-size: 2rem; margin-bottom: 6px; }
+    .mode-card .mc-name { font-weight: 800; font-size: .95rem; }
+    .mode-card .mc-desc { font-size: .7rem; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--felt-light), var(--felt));
+      color: #fff; border: none; border-radius: var(--radius);
+      padding: 18px; font-size: 1.05rem; font-weight: 800;
+      letter-spacing: 1px; cursor: pointer; width: 100%;
+      box-shadow: 0 4px 20px rgba(23,122,64,.45);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .btn-primary:active { transform: scale(.97); box-shadow: 0 2px 10px rgba(23,122,64,.3); }
+
+    .btn-ghost {
+      background: transparent; border: 1.5px solid var(--border);
+      color: var(--text-muted); border-radius: var(--radius);
+      padding: 13px; font-size: .9rem; font-weight: 600;
+      cursor: pointer; width: 100%; transition: all .15s;
+    }
+    .btn-ghost:active { background: var(--surface2); }
+
+    /* ────────────────────────────── GAME ─── */
+    #screen-game { overflow: hidden; }
+
+    .game-topbar {
+      background: var(--surface); display: flex;
+      align-items: center; justify-content: space-between;
+      padding: 8px 10px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; gap: 8px;
+    }
+    .game-title {
+      font-size: .72rem; font-weight: 700;
+      letter-spacing: .8px; color: var(--text-muted);
+      flex: 1; text-align: center;
+    }
+    .icon-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 9px; width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: .95rem; flex-shrink: 0;
+      transition: all .15s;
+    }
+    .icon-btn:active { transform: scale(.88); background: var(--felt); }
+    .icon-btn.disabled { opacity: .35; pointer-events: none; }
+
+    /* Match-point banner */
+    .mp-banner {
+      display: none; background: linear-gradient(90deg, #b8860b, var(--gold));
+      color: #000; text-align: center; padding: 7px 12px;
+      font-size: .68rem; font-weight: 800; letter-spacing: 1px;
+      text-transform: uppercase; flex-shrink: 0;
+    }
+    .mp-banner.show { display: block; }
+
+    /* Scoreboard */
+    .scoreboard {
+      display: grid; grid-template-columns: 1fr 1fr;
+      background: var(--felt-dark); flex-shrink: 0;
+    }
+    .player-panel {
+      padding: 10px 14px 12px; display: flex;
+      flex-direction: column; align-items: center; gap: 3px;
+      position: relative; transition: background .25s;
+    }
+    .player-panel + .player-panel { border-left: 1px solid rgba(255,255,255,.08); }
+    .player-panel.active-turn { background: rgba(255,255,255,.05); }
+    .player-panel.active-turn::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 3px; background: var(--gold);
+    }
+    .panel-name {
+      font-size: .68rem; font-weight: 600; letter-spacing: .5px;
+      color: rgba(255,255,255,.5); text-transform: uppercase;
+      max-width: 130px; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .panel-score {
+      font-size: 3.4rem; font-weight: 900;
+      color: #fff; line-height: 1;
+      letter-spacing: -2px; transition: color .2s;
+    }
+    .panel-score.match-point { color: var(--gold-light); }
+    .panel-score.bump { animation: scoreBump .3s ease; }
+    @keyframes scoreBump {
+      0%   { transform: scale(1); }
+      45%  { transform: scale(1.18); }
+      100% { transform: scale(1); }
+    }
+    .panel-threshold {
+      font-size: .62rem; color: rgba(255,255,255,.3); letter-spacing: .5px;
+    }
+    .panel-fouls {
+      font-size: .65rem; color: var(--red); font-weight: 600; min-height: 14px;
+    }
+    .turn-chip {
+      font-size: .6rem; background: var(--gold);
+      color: #000; padding: 2px 9px; border-radius: 20px;
+      font-weight: 800; letter-spacing: .5px;
+      visibility: hidden;
+    }
+    .turn-chip.show { visibility: visible; }
+
+    /* Stat bar */
+    .stat-bar {
+      background: var(--surface); display: flex;
+      justify-content: space-around; align-items: center;
+      padding: 7px 12px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .stat-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .stat-val { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+    .stat-lbl {
+      font-size: .58rem; color: var(--text-muted);
+      letter-spacing: .5px; text-transform: uppercase;
+    }
+    .stat-divider { width: 1px; height: 28px; background: var(--border); }
+
+    /* Ball felt area */
+    .ball-felt {
+      flex: 1; background: var(--felt);
+      display: flex; flex-direction: column;
+      overflow: hidden; position: relative; min-height: 0;
+    }
+    .ball-felt::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse at 15% 15%, rgba(255,255,255,.05) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 85%, rgba(0,0,0,.25) 0%, transparent 55%);
+      pointer-events: none; z-index: 0;
+    }
+    .felt-label {
+      font-size: .62rem; color: rgba(255,255,255,.3);
+      letter-spacing: 1px; text-transform: uppercase;
+      padding: 8px 16px 4px; font-weight: 600;
+      position: relative; z-index: 1;
+    }
+    .ball-grid {
+      display: flex; flex-wrap: wrap;
+      gap: 9px; padding: 4px 14px 10px;
+      justify-content: center;
+      position: relative; z-index: 1;
+      overflow-y: auto; flex: 1;
+    }
+
+    /* Balls */
+    .ball {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .88rem; font-weight: 900;
+      cursor: pointer; position: relative;
+      transition: transform .14s, opacity .3s, box-shadow .2s;
+      box-shadow:
+        inset -4px -4px 8px rgba(0,0,0,.45),
+        inset 4px 4px 8px rgba(255,255,255,.28),
+        0 4px 14px rgba(0,0,0,.45);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .ball:active { transform: scale(.84); }
+    .ball.stripe::before {
+      content: '';
+      position: absolute; left: 0; right: 0;
+      top: 32%; height: 36%;
+      background: rgba(255,255,255,.88);
+    }
+    .ball-num { position: relative; z-index: 1; }
+    .ball.pocketed {
+      opacity: .18; cursor: default;
+      pointer-events: none; box-shadow: none;
+      transform: scale(.82);
+    }
+    .ball.foul-pick {
+      cursor: pointer;
+      animation: foulGlow .75s ease-in-out infinite alternate;
+    }
+    @keyframes foulGlow {
+      from { box-shadow: 0 0 0 0 rgba(229,68,68,.7), inset -4px -4px 8px rgba(0,0,0,.45), inset 4px 4px 8px rgba(255,255,255,.28); }
+      to   { box-shadow: 0 0 0 10px rgba(229,68,68,0), inset -4px -4px 8px rgba(0,0,0,.45), inset 4px 4px 8px rgba(255,255,255,.28); }
+    }
+
+    /* Action bar */
+    .action-bar {
+      background: var(--surface); display: flex;
+      gap: 7px; padding: 9px 10px;
+      border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .act-btn {
+      flex: 1; padding: 13px 6px; border: none;
+      border-radius: var(--radius); font-size: .75rem;
+      font-weight: 700; letter-spacing: .3px;
+      cursor: pointer; transition: all .14s;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 3px; line-height: 1.1;
+    }
+    .act-btn:active { transform: scale(.93); }
+    .act-btn .ai { font-size: 1.15rem; }
+    .act-foul {
+      background: var(--red-soft);
+      border: 1.5px solid rgba(229,68,68,.4);
+      color: #ff8888;
+    }
+    .act-foul:active { background: rgba(229,68,68,.28); }
+    .act-switch {
+      background: rgba(212,164,50,.1);
+      border: 1.5px solid rgba(212,164,50,.3);
+      color: var(--gold-light);
+    }
+    .act-undo {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    /* ── FOUL OVERLAY ── */
+    .overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.88); z-index: 200;
+      flex-direction: column; align-items: center;
+      justify-content: flex-end; padding: 16px;
+    }
+    .overlay.show { display: flex; }
+    .bottom-sheet {
+      background: var(--surface); border-radius: 22px 22px 16px 16px;
+      width: 100%; max-width: 500px; padding: 22px 18px 20px;
+      animation: slideUp .28s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(110%); }
+      to   { transform: translateY(0); }
+    }
+    .sheet-title {
+      font-size: 1.05rem; font-weight: 800;
+      color: var(--red); text-align: center; margin-bottom: 4px;
+    }
+    .sheet-sub {
+      font-size: .78rem; color: var(--text-muted);
+      text-align: center; margin-bottom: 18px; line-height: 1.4;
+    }
+    .foul-grid {
+      display: flex; flex-wrap: wrap; gap: 9px;
+      justify-content: center; margin-bottom: 16px;
+    }
+    .foul-grid .ball { width: 48px; height: 48px; font-size: .8rem; }
+    .btn-cancel {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text-muted); border-radius: var(--radius);
+      padding: 13px; width: 100%; font-size: .9rem;
+      font-weight: 600; cursor: pointer;
+    }
+
+    /* ── WIN SCREEN ── */
+    #screen-win {
+      align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 50% 30%, #1c3d1c, #060d06 80%);
+    }
+    .win-wrap { text-align: center; padding: 32px 24px; width: 100%; max-width: 420px; }
+    .win-trophy {
+      font-size: 5rem;
+      animation: trophySway 1.2s ease-in-out infinite alternate;
+      display: block;
+    }
+    @keyframes trophySway {
+      from { transform: rotate(-6deg) translateY(0); }
+      to   { transform: rotate(6deg)  translateY(-10px); }
+    }
+    .win-name {
+      font-size: 2.2rem; font-weight: 900;
+      color: var(--gold-light); margin: 16px 0 2px;
+      letter-spacing: 1px;
+    }
+    .win-sub { font-size: 1rem; color: rgba(255,255,255,.4); margin-bottom: 28px; }
+    .win-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .win-card {
+      background: rgba(255,255,255,.06);
+      border-radius: var(--radius); padding: 16px 12px;
+      border: 1.5px solid transparent;
+    }
+    .win-card.winner { background: rgba(212,164,50,.14); border-color: var(--gold); }
+    .wc-name { font-size: .65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 4px; }
+    .wc-score { font-size: 2.6rem; font-weight: 900; color: #fff; }
+    .wc-fouls { font-size: .7rem; color: var(--red); margin-top: 4px; }
+    .win-meta { font-size: .78rem; color: var(--text-muted); margin-bottom: 28px; }
+    .win-acts { display: flex; flex-direction: column; gap: 10px; }
+
+    /* ── HISTORY SCREEN ── */
+    .hist-header {
+      background: var(--surface); padding: 12px 14px;
+      display: flex; align-items: center; gap: 10px;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .hist-header h2 { font-size: .95rem; font-weight: 800; flex: 1; }
+    .hist-body {
+      flex: 1; overflow-y: auto; padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .hist-card {
+      background: var(--surface2); border-radius: var(--radius);
+      padding: 14px; border: 1px solid var(--border);
+    }
+    .hc-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+    .hc-winner { font-weight: 700; font-size: .85rem; color: var(--gold-light); }
+    .hc-date { font-size: .68rem; color: var(--text-muted); }
+    .hc-scores { display: flex; align-items: center; gap: 0; }
+    .hc-player { display: flex; flex-direction: column; flex: 1; }
+    .hc-pname { font-size: .68rem; color: var(--text-muted); }
+    .hc-pscore { font-size: 1.5rem; font-weight: 800; }
+    .hc-vs { font-size: .75rem; color: var(--text-muted); padding: 0 10px; }
+    .hc-meta {
+      margin-top: 8px; font-size: .68rem;
+      color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .hist-empty { text-align: center; color: var(--text-muted); padding: 60px 24px; }
+    .hist-empty .ei { font-size: 3rem; margin-bottom: 10px; }
+
+    /* ── CONFETTI ── */
+    .confetti-wrap { position: fixed; inset: 0; pointer-events: none; z-index: 300; overflow: hidden; }
+    .cp {
+      position: absolute;
+      animation: cpFall linear forwards;
+    }
+    @keyframes cpFall {
+      0%   { transform: translateY(-60px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(105vh)  rotate(680deg); opacity: 0; }
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 88px; left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: rgba(5,12,5,.95); color: #fff;
+      padding: 10px 22px; border-radius: 30px;
+      font-size: .83rem; font-weight: 600;
+      z-index: 500; opacity: 0; pointer-events: none;
+      transition: opacity .25s, transform .25s;
+      white-space: nowrap; max-width: 90vw;
+      text-overflow: ellipsis; overflow: hidden;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════ SETUP ═══════════════════════ -->
+<div id="screen-setup" class="screen active">
+  <div class="setup-hero">
+    <span class="hero-ball">🎱</span>
+    <h1>BILLAR PRO</h1>
+    <p class="tagline">Professional Pool Scorekeeping</p>
+  </div>
+
+  <div class="setup-body">
+    <div>
+      <label class="field-label" for="p1name">Player 1</label>
+      <input class="field-input" id="p1name" type="text" placeholder="Enter name" maxlength="20" autocomplete="off">
+    </div>
+    <div>
+      <label class="field-label" for="p2name">Player 2</label>
+      <input class="field-input" id="p2name" type="text" placeholder="Enter name" maxlength="20" autocomplete="off">
+    </div>
+
+    <div>
+      <label class="field-label">Game Mode</label>
+      <div class="mode-grid">
+        <div class="mode-card selected" data-mode="standard" onclick="selectMode('standard')">
+          <div class="mc-icon">🎱</div>
+          <div class="mc-name">Standard</div>
+          <div class="mc-desc">Balls 1–15<br>120 pts · Win at 61</div>
+        </div>
+        <div class="mode-card" data-mode="from5" onclick="selectMode('from5')">
+          <div class="mc-icon">5️⃣</div>
+          <div class="mc-name">From 5</div>
+          <div class="mc-desc">Balls 5–15<br>110 pts · Win at 56</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="startMatch()">🎯&nbsp; START MATCH</button>
+    <button class="btn-ghost" onclick="openHistory()">📋&nbsp; Match History</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ GAME ═══════════════════════ -->
+<div id="screen-game" class="screen">
+
+  <div class="game-topbar">
+    <button class="icon-btn" onclick="confirmQuit()" title="Quit">🏠</button>
+    <span class="game-title" id="game-title">STANDARD · 120 PTS</span>
+    <div style="display:flex;gap:6px">
+      <button class="icon-btn" id="btn-undo" onclick="doUndo()" title="Undo">↩</button>
+      <button class="icon-btn" id="btn-redo" onclick="doRedo()" title="Redo">↪</button>
+      <button class="icon-btn" onclick="toggleTheme()" title="Theme">🌙</button>
+    </div>
+  </div>
+
+  <div class="mp-banner" id="mp-banner">
+    ⚡ Match Point — waiting for endgame condition
+  </div>
+
+  <div class="scoreboard">
+    <div class="player-panel" id="ppanel-0">
+      <div class="panel-name" id="pname-0">Player 1</div>
+      <div class="panel-score" id="pscore-0">0</div>
+      <div class="panel-threshold" id="pthresh-0">Win at 61</div>
+      <div class="panel-fouls"  id="pfouls-0"></div>
+      <div class="turn-chip" id="pturn-0">▶ TURN</div>
+    </div>
+    <div class="player-panel" id="ppanel-1">
+      <div class="panel-name" id="pname-1">Player 2</div>
+      <div class="panel-score" id="pscore-1">0</div>
+      <div class="panel-threshold" id="pthresh-1">Win at 61</div>
+      <div class="panel-fouls"  id="pfouls-1"></div>
+      <div class="turn-chip" id="pturn-1">▶ TURN</div>
+    </div>
+  </div>
+
+  <div class="stat-bar">
+    <div class="stat-item">
+      <span class="stat-val" id="sb-rem">120</span>
+      <span class="stat-lbl">Pts Left</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-val" id="sb-balls">15</span>
+      <span class="stat-lbl">Balls</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-val" id="sb-threshold">61</span>
+      <span class="stat-lbl">Win At</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-val" id="sb-time">0:00</span>
+      <span class="stat-lbl">Time</span>
+    </div>
+  </div>
+
+  <div class="ball-felt">
+    <div class="felt-label">TAP BALL TO POCKET</div>
+    <div class="ball-grid" id="ball-grid"></div>
+  </div>
+
+  <div class="action-bar">
+    <button class="act-btn act-foul" id="btn-foul-0" onclick="openFoul(0)">
+      <span class="ai">⚠️</span>
+      <span>FOUL</span>
+      <span id="fl-0" style="font-size:.62rem;opacity:.7;overflow:hidden;max-width:60px;text-overflow:ellipsis;white-space:nowrap"></span>
+    </button>
+    <button class="act-btn act-switch" onclick="doSwitch()">
+      <span class="ai">🔄</span>
+      <span>SWITCH</span>
+    </button>
+    <button class="act-btn act-undo" onclick="doUndo()">
+      <span class="ai">↩</span>
+      <span>UNDO</span>
+    </button>
+    <button class="act-btn act-foul" id="btn-foul-1" onclick="openFoul(1)">
+      <span class="ai">⚠️</span>
+      <span>FOUL</span>
+      <span id="fl-1" style="font-size:.62rem;opacity:.7;overflow:hidden;max-width:60px;text-overflow:ellipsis;white-space:nowrap"></span>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ FOUL OVERLAY ═══════════════════════ -->
+<div class="overlay" id="foul-overlay">
+  <div class="bottom-sheet">
+    <div class="sheet-title">🚨 FOUL / PILLO</div>
+    <div class="sheet-sub" id="foul-sub">Select the ball involved in the foul</div>
+    <div class="foul-grid" id="foul-grid"></div>
+    <button class="btn-cancel" onclick="closeFoul()">Cancel</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ WIN SCREEN ═══════════════════════ -->
+<div id="screen-win" class="screen">
+  <div class="confetti-wrap" id="confetti"></div>
+  <div class="win-wrap">
+    <span class="win-trophy">🏆</span>
+    <div class="win-name" id="win-name">—</div>
+    <div class="win-sub">WINS THE MATCH!</div>
+    <div class="win-cards" id="win-cards"></div>
+    <div class="win-meta" id="win-meta"></div>
+    <div class="win-acts">
+      <button class="btn-primary" onclick="newMatch()">🎱&nbsp; New Match</button>
+      <button class="btn-ghost" onclick="openHistory()">📋&nbsp; View History</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ HISTORY ═══════════════════════ -->
+<div id="screen-history" class="screen">
+  <div class="hist-header">
+    <button class="icon-btn" onclick="histBack()">←</button>
+    <h2>Match History</h2>
+    <button class="btn-ghost" onclick="clearHistory()" style="font-size:.7rem;padding:7px 12px;width:auto">Clear</button>
+  </div>
+  <div class="hist-body" id="hist-body"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════════════════════════ */
+
+const MODES = {
+  standard: { balls: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], total: 120, threshold: 61, label: 'STANDARD · 120 PTS' },
+  from5:    { balls: [5,6,7,8,9,10,11,12,13,14,15],           total: 110, threshold: 56, label: 'FROM 5 · 110 PTS'   },
+};
+
+const BALL_STYLE = {
+  1:  { bg:'#f5d700', color:'#111', stripe:false },
+  2:  { bg:'#1565c0', color:'#fff', stripe:false },
+  3:  { bg:'#c62828', color:'#fff', stripe:false },
+  4:  { bg:'#6a1b9a', color:'#fff', stripe:false },
+  5:  { bg:'#e65100', color:'#fff', stripe:false },
+  6:  { bg:'#2e7d32', color:'#fff', stripe:false },
+  7:  { bg:'#880e4f', color:'#fff', stripe:false },
+  8:  { bg:'#111111', color:'#fff', stripe:false },
+  9:  { bg:'#f5d700', color:'#111', stripe:true  },
+  10: { bg:'#1565c0', color:'#fff', stripe:true  },
+  11: { bg:'#c62828', color:'#fff', stripe:true  },
+  12: { bg:'#6a1b9a', color:'#fff', stripe:true  },
+  13: { bg:'#e65100', color:'#fff', stripe:true  },
+  14: { bg:'#2e7d32', color:'#fff', stripe:true  },
+  15: { bg:'#880e4f', color:'#fff', stripe:true  },
+};
+
+/* ═══════════════════════════════════════════════════════════
+   GAME ENGINE  (pure logic — no DOM)
+═══════════════════════════════════════════════════════════ */
+
+class BilliardsEngine {
+  constructor({ mode, player1, player2 }) {
+    this.mode = mode;
+    this.cfg  = MODES[mode];
+
+    this.players = [
+      { name: player1 || 'Player 1', ballScore: 0, fouls: 0 },
+      { name: player2 || 'Player 2', ballScore: 0, fouls: 0 },
+    ];
+
+    this.balls = this.cfg.balls.map(id => ({
+      id, value: id,
+      status: 'available',   // 'available' | 'pocketed'
+      pocketedBy: null,
+    }));
+
+    // Net foul balance: positive = player 0 is in debt, negative = player 1 is in debt.
+    // Fouls from either side cancel each other — only one player can owe at a time.
+    this.foulBalance     = 0;
+
+    this.currentPlayer   = 0;
+    this.status          = 'active';  // 'active' | 'matchPoint' | 'won'
+    this.winner          = null;
+    this.matchPointWho   = null;
+    this.actions         = [];
+    this._undo           = [];
+    this._redo           = [];
+    this.startTime       = Date.now();
+  }
+
+  /* ── derived ── */
+  get remainingPoints() {
+    return this.balls.filter(b => b.status === 'available').reduce((s, b) => s + b.value, 0);
+  }
+  get remainingBalls() {
+    return this.balls.filter(b => b.status === 'available').length;
+  }
+
+  // Final score after applying the pillo half-split (used only at end of match).
+  // The full pillo balance is halved: the owing player loses that half, opponent gains it.
+  effectiveScore(i) {
+    const half = Math.floor(Math.abs(this.foulBalance) / 2);
+    if (this.foulBalance > 0) {
+      // player 0 owes
+      return i === 0
+        ? this.players[0].ballScore - half
+        : this.players[1].ballScore + half;
+    } else if (this.foulBalance < 0) {
+      // player 1 owes
+      return i === 0
+        ? this.players[0].ballScore + half
+        : this.players[1].ballScore - half;
+    }
+    return this.players[i].ballScore;
+  }
+
+  // Full pillo debt this player owes right now (displayed live, not halved yet).
+  foulDebt(i) {
+    return i === 0 ? Math.max(0, this.foulBalance) : Math.max(0, -this.foulBalance);
+  }
+
+  // Invariant: ball scores + remaining = total (fouls are a transfer, not a loss)
+  get invariantOk() {
+    return this.players[0].ballScore + this.players[1].ballScore + this.remainingPoints === this.cfg.total;
+  }
+  canUndo() { return this._undo.length > 0; }
+  canRedo() { return this._redo.length > 0; }
+
+  /* ── snapshot ── */
+  _snap() {
+    return JSON.parse(JSON.stringify({
+      players: this.players, balls: this.balls,
+      foulBalance: this.foulBalance,
+      currentPlayer: this.currentPlayer, status: this.status,
+      winner: this.winner, matchPointWho: this.matchPointWho,
+      actions: this.actions,
+    }));
+  }
+  _restore(s) {
+    ({ players: this.players, balls: this.balls,
+       foulBalance: this.foulBalance,
+       currentPlayer: this.currentPlayer, status: this.status,
+       winner: this.winner, matchPointWho: this.matchPointWho,
+       actions: this.actions } = s);
+  }
+
+  /* ── win evaluator — called after EVERY mutation ── */
+  _evalWin() {
+    if (this.status === 'won') return;
+
+    if (this.remainingBalls <= 1) {
+      // Game is ending — apply pillo half-split and find winner by effective score.
+      const s0 = this.effectiveScore(0), s1 = this.effectiveScore(1);
+      // Need at least one player at/above threshold to declare a winner.
+      if (s0 >= this.cfg.threshold || s1 >= this.cfg.threshold) {
+        this.status = 'won';
+        this.winner = s0 >= s1 ? 0 : 1;
+        return;
+      }
+    }
+
+    // Match-point banner: a player has reached threshold in ball score (pillos not yet applied).
+    let mpWho = null;
+    for (let i = 0; i < 2; i++) {
+      if (this.players[i].ballScore >= this.cfg.threshold) mpWho = i;
+    }
+    this.matchPointWho = mpWho;
+    this.status = mpWho !== null ? 'matchPoint' : 'active';
+  }
+
+  /* ── public actions ── */
+
+  pocketBall(ballId) {
+    if (this.status === 'won') return { error: 'Match is over' };
+    const ball = this.balls.find(b => b.id === ballId);
+    if (!ball)                          return { error: 'Ball not found' };
+    if (ball.status !== 'available')    return { error: 'Ball already pocketed' };
+
+    this._undo.push(this._snap());
+    this._redo = [];
+
+    ball.status     = 'pocketed';
+    ball.pocketedBy = this.currentPlayer;
+    this.players[this.currentPlayer].ballScore += ball.value;
+
+    this.actions.push({
+      type: 'pocket', player: this.currentPlayer,
+      name: this.players[this.currentPlayer].name,
+      ballId, ballValue: ball.value, ts: Date.now(),
+    });
+
+    this._evalWin();
+    return { ok: true, ball };
+  }
+
+  declareFoul(ballId, offender) {
+    if (this.status === 'won') return { error: 'Match is over' };
+    const ball = this.balls.find(b => b.id === ballId);
+    if (!ball)                       return { error: 'Ball not found' };
+    if (ball.status !== 'available') return { error: 'Ball already pocketed' };
+
+    this._undo.push(this._snap());
+    this._redo = [];
+
+    // Track the FULL ball value in the pillo balance — the half-split is only
+    // applied to the final score at end of match, not during play.
+    if (offender === 0) this.foulBalance += ball.value;
+    else                this.foulBalance -= ball.value;
+
+    this.players[offender].fouls++;
+    // Ball stays on table; turn passes to opponent.
+    this.currentPlayer = 1 - offender;
+
+    this.actions.push({
+      type: 'foul', player: offender,
+      name: this.players[offender].name,
+      ballId, ballValue: ball.value,
+      foulBalanceAfter: this.foulBalance, ts: Date.now(),
+    });
+
+    this._evalWin();
+    return { ok: true, pilloValue: ball.value, foulBalance: this.foulBalance };
+  }
+
+  switchTurn() {
+    this.currentPlayer = 1 - this.currentPlayer;
+  }
+
+  undo() {
+    if (!this.canUndo()) return { error: 'Nothing to undo' };
+    this._redo.push(this._snap());
+    this._restore(this._undo.pop());
+    return { ok: true };
+  }
+
+  redo() {
+    if (!this.canRedo()) return { error: 'Nothing to redo' };
+    this._undo.push(this._snap());
+    this._restore(this._redo.pop());
+    return { ok: true };
+  }
+
+  summary() {
+    return {
+      mode: this.mode, cfg: this.cfg,
+      players: this.players.map((p, i) => ({
+        name: p.name,
+        ballScore: p.ballScore,
+        score: this.effectiveScore(i),   // final effective score
+        foulDebt: this.foulDebt(i),
+        fouls: p.fouls,
+      })),
+      foulBalance: this.foulBalance,
+      winner: this.winner,
+      winnerName: this.winner !== null ? this.players[this.winner].name : null,
+      actions: this.actions,
+      startTime: this.startTime, endTime: Date.now(),
+      duration: Date.now() - this.startTime,
+    };
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MATCH HISTORY  (localStorage)
+═══════════════════════════════════════════════════════════ */
+
+const History = {
+  KEY: 'billar_pro_v2',
+  all()  { try { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); } catch { return []; } },
+  save(s){ const a = this.all(); a.unshift({ ...s, id: Date.now() }); try { localStorage.setItem(this.KEY, JSON.stringify(a.slice(0,100))); } catch {} },
+  clear(){ localStorage.removeItem(this.KEY); },
+};
+
+/* ═══════════════════════════════════════════════════════════
+   AUDIO
+═══════════════════════════════════════════════════════════ */
+
+let _ctx = null;
+function ac() {
+  if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
+  return _ctx;
+}
+function tone(f, t, dur, type='sine', vol=0.28) {
+  try {
+    const o = ac().createOscillator(), g = ac().createGain();
+    o.connect(g); g.connect(ac().destination);
+    o.frequency.value = f; o.type = type;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.start(t); o.stop(t + dur);
+  } catch {}
+}
+function sfxPocket() {
+  const t = ac().currentTime;
+  tone(880, t,      0.07, 'triangle', 0.22);
+  tone(1200, t+.06, 0.06, 'sine',     0.14);
+}
+function sfxFoul() {
+  const t = ac().currentTime;
+  tone(220, t,    0.28, 'sawtooth', 0.22);
+  tone(185, t+.2, 0.20, 'sawtooth', 0.16);
+}
+function sfxWin() {
+  const t = ac().currentTime;
+  [523,659,784,1047].forEach((f,i) => tone(f, t + i*.18, 0.4, 'sine', 0.28));
+}
+
+function vib(p) { try { navigator.vibrate(p); } catch {} }
+
+/* ═══════════════════════════════════════════════════════════
+   APP STATE
+═══════════════════════════════════════════════════════════ */
+
+let engine       = null;
+let selMode      = 'standard';
+let foulFor      = null;          // player index or null
+let timer        = null;
+let histPrevScr  = 'setup';
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN NAV
+═══════════════════════════════════════════════════════════ */
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  setTimeout(() => document.getElementById(id).classList.add('active'), 10);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SETUP
+═══════════════════════════════════════════════════════════ */
+
+function selectMode(m) {
+  selMode = m;
+  document.querySelectorAll('.mode-card').forEach(c =>
+    c.classList.toggle('selected', c.dataset.mode === m));
+}
+
+function startMatch() {
+  const p1 = document.getElementById('p1name').value.trim() || 'Player 1';
+  const p2 = document.getElementById('p2name').value.trim() || 'Player 2';
+  engine = new BilliardsEngine({ mode: selMode, player1: p1, player2: p2 });
+
+  const cfg = engine.cfg;
+  document.getElementById('game-title').textContent    = cfg.label;
+  document.getElementById('sb-threshold').textContent  = cfg.threshold;
+  ['pname-0','pname-1'].forEach((id,i) =>
+    document.getElementById(id).textContent = engine.players[i].name);
+  ['fl-0','fl-1'].forEach((id,i) =>
+    document.getElementById(id).textContent = engine.players[i].name.substring(0,10));
+  ['pthresh-0','pthresh-1'].forEach(id =>
+    document.getElementById(id).textContent = `Win at ${cfg.threshold}`);
+
+  buildBallGrid();
+  syncUI();
+  startClock();
+  show('screen-game');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CLOCK
+═══════════════════════════════════════════════════════════ */
+
+function startClock() {
+  if (timer) clearInterval(timer);
+  timer = setInterval(() => {
+    if (!engine) return;
+    const e = Date.now() - engine.startTime;
+    const m = Math.floor(e / 60000), s = Math.floor((e % 60000) / 1000);
+    document.getElementById('sb-time').textContent = `${m}:${String(s).padStart(2,'0')}`;
+  }, 1000);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BALL GRID
+═══════════════════════════════════════════════════════════ */
+
+function mkBall(ball, clickFn) {
+  const st  = BALL_STYLE[ball.id];
+  const el  = document.createElement('div');
+  el.className = 'ball' + (st.stripe ? ' stripe' : '') + (ball.status === 'pocketed' ? ' pocketed' : '');
+  el.id        = 'b' + ball.id;
+  el.style.background = st.bg;
+  el.style.color      = st.color;
+  const num = document.createElement('span');
+  num.className = 'ball-num';
+  num.textContent = ball.id;
+  el.appendChild(num);
+  if (clickFn) el.addEventListener('click', () => clickFn(ball.id));
+  return el;
+}
+
+function buildBallGrid() {
+  const g = document.getElementById('ball-grid');
+  g.innerHTML = '';
+  engine.balls.forEach(ball => g.appendChild(mkBall(ball, pocketBall)));
+}
+
+function refreshBalls() {
+  engine.balls.forEach(ball => {
+    const el = document.getElementById('b' + ball.id);
+    if (!el) return;
+    el.classList.toggle('pocketed', ball.status === 'pocketed');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   POCKET A BALL
+═══════════════════════════════════════════════════════════ */
+
+function pocketBall(ballId) {
+  if (!engine || engine.status === 'won') return;
+  const res = engine.pocketBall(ballId);
+  if (res.error) { toast(res.error); return; }
+
+  sfxPocket(); vib(25);
+
+  // Bump animation on scorer
+  const last = engine.actions[engine.actions.length - 1];
+  if (last?.type === 'pocket') bumpScore(last.player);
+
+  syncUI();
+  if (engine.status === 'won') triggerWin();
+}
+
+function bumpScore(pIdx) {
+  const el = document.getElementById('pscore-' + pIdx);
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+  setTimeout(() => el.classList.remove('bump'), 400);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FOUL SYSTEM
+═══════════════════════════════════════════════════════════ */
+
+function openFoul(playerIdx) {
+  if (!engine || engine.status === 'won') return;
+  if (playerIdx !== engine.currentPlayer) {
+    toast(`Solo el jugador en turno puede cometer un pillo`);
+    return;
+  }
+  foulFor = playerIdx;
+
+  const avail = engine.balls.filter(b => b.status === 'available');
+  if (!avail.length) { toast('No balls available for foul'); return; }
+
+  document.getElementById('foul-sub').textContent =
+    `${engine.players[playerIdx].name} committed a foul — select the ball involved:`;
+
+  const fg = document.getElementById('foul-grid');
+  fg.innerHTML = '';
+  avail.forEach(ball => {
+    const el = mkBall(ball, applyFoul);
+    el.classList.add('foul-pick');
+    el.title = `Ball ${ball.id} = ${ball.value} pts → Foul ±${Math.floor(ball.value/2)}`;
+    fg.appendChild(el);
+  });
+
+  document.getElementById('foul-overlay').classList.add('show');
+}
+
+function applyFoul(ballId) {
+  if (foulFor === null) return;
+  const res = engine.declareFoul(ballId, foulFor);
+  if (res.error) { toast(res.error); closeFoul(); return; }
+
+  sfxFoul(); vib([45,25,45]);
+
+  const d0 = engine.foulDebt(0), d1 = engine.foulDebt(1);
+  const debtMsg = d0 > 0
+    ? `${engine.players[0].name} acumula ${d0} pts en pillos`
+    : d1 > 0
+    ? `${engine.players[1].name} acumula ${d1} pts en pillos`
+    : 'Pillos cancelados ✓';
+  toast(`⚠️ Pillo (${res.pilloValue} pts) — ${debtMsg}`);
+
+  closeFoul();
+  buildBallGrid();   // rebuild (ball grid didn't change, but update styles)
+  syncUI();
+  if (engine.status === 'won') triggerWin();
+}
+
+function closeFoul() {
+  foulFor = null;
+  document.getElementById('foul-overlay').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SWITCH / UNDO / REDO
+═══════════════════════════════════════════════════════════ */
+
+function doSwitch() {
+  if (!engine || engine.status === 'won') return;
+  engine.switchTurn();
+  vib(18);
+  syncUI();
+}
+
+function doUndo() {
+  if (!engine) return;
+  const r = engine.undo();
+  if (r.error) { toast('Nothing to undo'); return; }
+  vib(35); toast('↩ Undone');
+  buildBallGrid(); syncUI();
+}
+
+function doRedo() {
+  if (!engine) return;
+  const r = engine.redo();
+  if (r.error) { toast('Nothing to redo'); return; }
+  vib(35); toast('↪ Redone');
+  buildBallGrid(); syncUI();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SYNC UI
+═══════════════════════════════════════════════════════════ */
+
+function syncUI() {
+  if (!engine) return;
+
+  // Live score = ball score only (pillo adjustment applied only at end)
+  [0, 1].forEach(i => {
+    const scoreEl = document.getElementById('pscore-' + i);
+    scoreEl.textContent = engine.players[i].ballScore;
+    scoreEl.classList.toggle('match-point', engine.matchPointWho === i);
+
+    const debt = engine.foulDebt(i);
+    const foulsEl = document.getElementById('pfouls-' + i);
+    if (debt > 0) {
+      foulsEl.textContent = `⚠️ ${debt} pts en pillos`;
+    } else if (engine.players[i].fouls > 0) {
+      foulsEl.textContent = `✓ pillos cancelados`;
+    } else {
+      foulsEl.textContent = '';
+    }
+  });
+
+  // Active turn + foul button state
+  [0,1].forEach(i => {
+    const isActive = engine.currentPlayer === i;
+    document.getElementById('ppanel-' + i).classList.toggle('active-turn', isActive);
+    document.getElementById('pturn-' + i).classList.toggle('show', isActive);
+    document.getElementById('btn-foul-' + i).style.opacity = isActive ? '1' : '0.35';
+    document.getElementById('btn-foul-' + i).style.pointerEvents = isActive ? '' : 'none';
+  });
+
+  // Stat bar
+  document.getElementById('sb-rem').textContent   = engine.remainingPoints;
+  document.getElementById('sb-balls').textContent = engine.remainingBalls;
+
+  // Match-point banner
+  document.getElementById('mp-banner').classList.toggle('show', engine.status === 'matchPoint');
+
+  // Undo/Redo button states
+  document.getElementById('btn-undo').classList.toggle('disabled', !engine.canUndo());
+  document.getElementById('btn-redo').classList.toggle('disabled', !engine.canRedo());
+
+  // Refresh ball visuals
+  refreshBalls();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WIN
+═══════════════════════════════════════════════════════════ */
+
+function triggerWin() {
+  if (timer) clearInterval(timer);
+  sfxWin(); vib([80,40,80,40,160]);
+
+  const s = engine.summary();
+  History.save(s);
+
+  document.getElementById('win-name').textContent = s.winnerName;
+
+  const cards = document.getElementById('win-cards');
+  cards.innerHTML = '';
+  s.players.forEach((p, i) => {
+    const c = document.createElement('div');
+    c.className = 'win-card' + (i === s.winner ? ' winner' : '');
+    const pilloAdj = p.score - p.ballScore; // positive = gained, negative = lost
+    const pilloLine = p.foulDebt > 0
+      ? `Bolas: ${p.ballScore} − pillos: ${p.foulDebt}÷2 = −${p.foulDebt >> 1}`
+      : pilloAdj > 0
+      ? `Bolas: ${p.ballScore} + pillos oponente ÷2 = +${pilloAdj}`
+      : `Bolas: ${p.ballScore}`;
+    c.innerHTML = `
+      <div class="wc-name">${i === s.winner ? '🏆 ' : ''}${p.name}</div>
+      <div class="wc-score">${p.score}</div>
+      <div class="wc-fouls" style="font-size:.68rem;margin-top:4px;opacity:.8">${pilloLine}</div>`;
+    cards.appendChild(c);
+  });
+
+  const d = s.duration;
+  document.getElementById('win-meta').textContent =
+    `Duration: ${Math.floor(d/60000)}m ${Math.floor((d%60000)/1000)}s  ·  Mode: ${s.mode === 'standard' ? 'Standard' : 'From 5'}`;
+
+  confetti();
+  setTimeout(() => show('screen-win'), 380);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CONFETTI
+═══════════════════════════════════════════════════════════ */
+
+function confetti() {
+  const el = document.getElementById('confetti');
+  el.innerHTML = '';
+  const colors = ['#d4a432','#00cfff','#ff4455','#00ff88','#fff','#ff8800','#aa44ff'];
+  for (let i = 0; i < 90; i++) {
+    const p = document.createElement('div');
+    p.className = 'cp';
+    const sz = 7 + Math.random() * 9;
+    p.style.cssText = `
+      left:${Math.random()*100}%;
+      width:${sz}px; height:${sz}px;
+      background:${colors[i % colors.length]};
+      border-radius:${Math.random() > .5 ? '50%' : '3px'};
+      animation-duration:${1.4 + Math.random() * 2.2}s;
+      animation-delay:${Math.random() * .9}s;`;
+    el.appendChild(p);
+  }
+  setTimeout(() => { el.innerHTML = ''; }, 4500);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NEW MATCH / QUIT
+═══════════════════════════════════════════════════════════ */
+
+function newMatch() {
+  if (timer) clearInterval(timer);
+  engine = null;
+  show('screen-setup');
+}
+
+function confirmQuit() {
+  if (!engine || engine.status === 'won') { newMatch(); return; }
+  if (confirm('Abandon the current match?')) {
+    if (timer) clearInterval(timer);
+    engine = null;
+    show('screen-setup');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HISTORY
+═══════════════════════════════════════════════════════════ */
+
+function openHistory() {
+  histPrevScr = engine ? 'screen-game' : 'screen-setup';
+  const all  = History.all();
+  const body = document.getElementById('hist-body');
+
+  if (!all.length) {
+    body.innerHTML = `<div class="hist-empty"><div class="ei">🎱</div><div>No matches recorded yet.</div></div>`;
+  } else {
+    body.innerHTML = '';
+    all.forEach(m => {
+      const c   = document.createElement('div');
+      c.className = 'hist-card';
+      const dt  = new Date(m.startTime);
+      const ds  = dt.toLocaleDateString() + ' ' + dt.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+      const dur = m.duration || (m.endTime - m.startTime);
+      const dm  = Math.floor(dur / 60000), ds2 = Math.floor((dur % 60000) / 1000);
+      const tf  = (m.players || []).reduce((s, p) => s + (p.fouls || 0), 0);
+      const [p0, p1] = m.players || [{name:'?',score:0},{name:'?',score:0}];
+      c.innerHTML = `
+        <div class="hc-top">
+          <div class="hc-winner">🏆 ${m.winnerName || '?'}</div>
+          <div class="hc-date">${ds}</div>
+        </div>
+        <div class="hc-scores">
+          <div class="hc-player">
+            <div class="hc-pname">${p0.name}</div>
+            <div class="hc-pscore" style="${m.winner===0?'color:var(--gold-light)':''}">${p0.score}</div>
+          </div>
+          <div class="hc-vs">vs</div>
+          <div class="hc-player" style="text-align:right">
+            <div class="hc-pname">${p1.name}</div>
+            <div class="hc-pscore" style="${m.winner===1?'color:var(--gold-light)':''}">${p1.score}</div>
+          </div>
+        </div>
+        <div class="hc-meta">
+          <span>⏱ ${dm}m ${ds2}s</span>
+          <span>🎱 ${m.mode === 'standard' ? 'Standard' : 'From 5'}</span>
+          <span>${tf > 0 ? '⚠️ ' + tf + ' foul' + (tf>1?'s':'') : '✅ Clean'}</span>
+        </div>`;
+      body.appendChild(c);
+    });
+  }
+  show('screen-history');
+}
+
+function histBack() { show(histPrevScr); }
+
+function clearHistory() {
+  if (confirm('Clear all match history?')) {
+    History.clear();
+    openHistory();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THEME
+═══════════════════════════════════════════════════════════ */
+
+function toggleTheme() {
+  const html = document.documentElement;
+  html.setAttribute('data-theme',
+    html.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════════ */
+
+let _toastT = null;
+function toast(msg, dur = 2600) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (_toastT) clearTimeout(_toastT);
+  _toastT = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN WAKE LOCK — keep screen on during matches
+═══════════════════════════════════════════════════════════ */
+let _wakeLock = null;
+
+async function acquireWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      _wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch (_) {}
+}
+
+// Re-acquire after tab becomes visible again (Android/iOS suspend it)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') acquireWakeLock();
+});
+
+acquireWakeLock();
+
+/* ═══════════════════════════════════════════════════════════
+   CAPACITOR BRIDGE — status bar & keyboard on native
+═══════════════════════════════════════════════════════════ */
+document.addEventListener('deviceready', () => {
+  // Capacitor native is available (Android / iOS)
+  if (window.Capacitor && window.Capacitor.Plugins) {
+    const { StatusBar, NavigationBar } = window.Capacitor.Plugins;
+    if (StatusBar) {
+      StatusBar.setBackgroundColor({ color: '#09100c' }).catch(() => {});
+      StatusBar.setStyle({ style: 'DARK' }).catch(() => {});
+    }
+    if (NavigationBar) {
+      NavigationBar.setColor({ color: '#111811', darkButtons: false }).catch(() => {});
+    }
+  }
+});
+</script>
+</body>
+</html>

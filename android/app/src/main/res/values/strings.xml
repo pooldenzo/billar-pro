@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Billar Pro</string>
+    <string name="title_activity_main">Billar Pro</string>
+    <string name="package_name">com.billarpro.app</string>
+    <string name="custom_url_scheme">com.billarpro.app</string>
+</resources>

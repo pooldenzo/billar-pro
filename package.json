@@ -1,0 +1,23 @@
+{
+  "name": "billar-pro",
+  "version": "1.0.0",
+  "description": "Professional Pool Scorekeeping App",
+  "private": true,
+  "scripts": {
+    "sync":            "cap sync",
+    "open:android":    "cap open android",
+    "open:ios":        "cap open ios",
+    "build:debug":     "powershell -ExecutionPolicy Bypass -File scripts/build-debug.ps1",
+    "build:release":   "powershell -ExecutionPolicy Bypass -File scripts/build-release.ps1",
+    "build:apk":       "npm run sync && cd android && .\\gradlew.bat assembleDebug",
+    "copy:web":        "powershell -ExecutionPolicy Bypass -File scripts/copy-web.ps1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core":    "^6.0.0",
+    "@capacitor/ios":     "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}

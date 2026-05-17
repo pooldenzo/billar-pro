@@ -1,0 +1,14 @@
+node_modules/
+android/.gradle/
+android/app/build/
+android/build/
+ios/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+*.apk
+*.aab
+*.ipa
+*.keystore
+*.jks
+.env
+.env.local
+dist/
