@@ -1,24 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Billar Pro</title>
-  <meta name="theme-color" content="#09100c">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Billar Pro">
-  <meta name="mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.json">
   <style>
-    /* ── Safe area (notch / Dynamic Island / gesture bar) ── */
-    :root {
-      --sat: env(safe-area-inset-top,    0px);
-      --sab: env(safe-area-inset-bottom, 0px);
-      --sal: env(safe-area-inset-left,   0px);
-      --sar: env(safe-area-inset-right,  0px);
-    }
-
     :root {
       --felt:        #0d5c2e;
       --felt-light:  #177a40;
@@ -61,15 +48,7 @@
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
-      /* Prevent pull-to-refresh and overscroll glow on Android */
-      overscroll-behavior: none;
     }
-
-    /* Push content clear of the status bar and home indicator */
-    .game-topbar  { padding-top:    calc(8px  + var(--sat)); }
-    .setup-hero   { padding-top:    calc(48px + var(--sat)); }
-    .action-bar   { padding-bottom: calc(9px  + var(--sab)); }
-    .hist-header  { padding-top:    calc(12px + var(--sat)); }
 
     /* ── SCREENS ── */
     .screen {
@@ -1338,43 +1317,6 @@ function toast(msg, dur = 2600) {
   if (_toastT) clearTimeout(_toastT);
   _toastT = setTimeout(() => el.classList.remove('show'), dur);
 }
-
-/* ═══════════════════════════════════════════════════════════
-   SCREEN WAKE LOCK — keep screen on during matches
-═══════════════════════════════════════════════════════════ */
-let _wakeLock = null;
-
-async function acquireWakeLock() {
-  try {
-    if ('wakeLock' in navigator) {
-      _wakeLock = await navigator.wakeLock.request('screen');
-    }
-  } catch (_) {}
-}
-
-// Re-acquire after tab becomes visible again (Android/iOS suspend it)
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') acquireWakeLock();
-});
-
-acquireWakeLock();
-
-/* ═══════════════════════════════════════════════════════════
-   CAPACITOR BRIDGE — status bar & keyboard on native
-═══════════════════════════════════════════════════════════ */
-document.addEventListener('deviceready', () => {
-  // Capacitor native is available (Android / iOS)
-  if (window.Capacitor && window.Capacitor.Plugins) {
-    const { StatusBar, NavigationBar } = window.Capacitor.Plugins;
-    if (StatusBar) {
-      StatusBar.setBackgroundColor({ color: '#09100c' }).catch(() => {});
-      StatusBar.setStyle({ style: 'DARK' }).catch(() => {});
-    }
-    if (NavigationBar) {
-      NavigationBar.setColor({ color: '#111811', darkButtons: false }).catch(() => {});
-    }
-  }
-});
 </script>
 </body>
 </html>
