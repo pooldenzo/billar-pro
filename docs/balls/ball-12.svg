@@ -1,19 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
   <defs>
-    <filter id="sh12"><feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#000" flood-opacity="0.55"/></filter>
-  </defs>
-  <defs>
-    <radialGradient id="base12" cx="35%" cy="30%">
+    <filter id="sh"><feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#000" flood-opacity="0.55"/></filter>
+    <radialGradient id="base" cx="35%" cy="30%">
       <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
       <stop offset="25%" stop-color="#f6f1ff" stop-opacity="0.95"/>
       <stop offset="65%" stop-color="#6a1b9a" stop-opacity="1"/>
       <stop offset="100%" stop-color="#3f0f51" stop-opacity="1"/>
     </radialGradient>
+    <clipPath id="clip"><circle cx="100" cy="100" r="84"/></clipPath>
   </defs>
-  <g filter="url(#sh12)">
-    <circle cx="100" cy="100" r="84" fill="url(#base12)" />
-    <rect x="0" y="72" width="200" height="56" fill="#6a1b9a" />
-    <circle cx="72" cy="68" r="20" fill="rgba(255,255,255,0.9)" />
+  <g filter="url(#sh)">
+    <circle cx="100" cy="100" r="84" fill="url(#base)" />
+    <g clip-path="url(#clip)">
+      <rect x="0" y="72" width="200" height="56" fill="#6a1b9a" />
+      <circle cx="72" cy="68" r="20" fill="rgba(255,255,255,0.9)" />
+    </g>
   </g>
   <g>
     <circle cx="100" cy="100" r="36" fill="#ffffff" stroke="#000" stroke-width="3" />
