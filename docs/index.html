@@ -261,37 +261,42 @@
       overflow-y: auto; flex: 1;
     }
 
-    /* Balls */
+    /* Balls (image-based 3D buttons) */
     .ball {
-      width: 52px; height: 52px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
       font-size: .88rem; font-weight: 900;
       cursor: pointer; position: relative;
-      transition: transform .14s, opacity .3s, box-shadow .2s;
+      transition: transform .14s, opacity .3s, box-shadow .18s;
       box-shadow:
-        inset -4px -4px 8px rgba(0,0,0,.45),
-        inset 4px 4px 8px rgba(255,255,255,.28),
-        0 4px 14px rgba(0,0,0,.45);
-      flex-shrink: 0;
-      overflow: hidden;
+        0 10px 18px rgba(0,0,0,.45),
+        inset -6px -6px 14px rgba(0,0,0,.45),
+        inset 6px 6px 10px rgba(255,255,255,.18);
+      flex-shrink: 0; overflow: hidden; border: none; padding: 0;
+      background-size: cover; background-position: center; background-repeat: no-repeat;
     }
-    .ball:active { transform: scale(.84); }
+    .ball:active { transform: translateY(3px) scale(.985); box-shadow: 0 4px 8px rgba(0,0,0,.4); }
     .ball.stripe::before {
       content: '';
       position: absolute; left: 0; right: 0;
       top: 32%; height: 36%;
       background: rgba(255,255,255,.88);
+      mix-blend-mode: overlay;
     }
-    .ball-num { position: relative; z-index: 1; }
+    .ball-num {
+      position: relative; z-index: 3; pointer-events: none;
+    }
+    .ball .num-badge {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.94); color: #000; font-weight: 900;
+      box-shadow: 0 2px 6px rgba(0,0,0,.35); font-size: .78rem;
+      border: 2px solid rgba(0,0,0,.12);
+    }
     .ball.pocketed {
-      opacity: .18; cursor: default;
-      pointer-events: none; box-shadow: none;
-      transform: scale(.82);
+      opacity: .18; cursor: default; pointer-events: none; box-shadow: none; transform: scale(.86);
     }
-    .ball.foul-pick {
-      cursor: pointer;
-      animation: foulGlow .75s ease-in-out infinite alternate;
-    }
+    .ball.foul-pick { cursor: pointer; animation: foulGlow .75s ease-in-out infinite alternate; }
     @keyframes foulGlow {
       from { box-shadow: 0 0 0 0 rgba(229,68,68,.7), inset -4px -4px 8px rgba(0,0,0,.45), inset 4px 4px 8px rgba(255,255,255,.28); }
       to   { box-shadow: 0 0 0 10px rgba(229,68,68,0), inset -4px -4px 8px rgba(0,0,0,.45), inset 4px 4px 8px rgba(255,255,255,.28); }
@@ -917,15 +922,24 @@ function startClock() {
 
 function mkBall(ball, clickFn) {
   const st  = BALL_STYLE[ball.id];
-  const el  = document.createElement('div');
+  // Create image-style button with glossy relief and number badge
+  const el = document.createElement('button');
+  el.type = 'button';
   el.className = 'ball' + (st.stripe ? ' stripe' : '') + (ball.status === 'pocketed' ? ' pocketed' : '');
-  el.id        = 'b' + ball.id;
-  el.style.background = st.bg;
-  el.style.color      = st.color;
+  el.id = 'b' + ball.id;
+  // Use the user-provided ballsstyle image as background (falls back to color)
+  el.style.backgroundImage = "url('./ballsstyle.jpg')";
+  el.style.backgroundColor = st.bg;
+  el.style.color = st.color;
+
+  const numWrap = document.createElement('span');
+  numWrap.className = 'ball-num';
   const num = document.createElement('span');
-  num.className = 'ball-num';
+  num.className = 'num-badge';
   num.textContent = ball.id;
-  el.appendChild(num);
+  numWrap.appendChild(num);
+  el.appendChild(numWrap);
+
   if (clickFn) el.addEventListener('click', () => clickFn(ball.id));
   return el;
 }
