@@ -10,12 +10,20 @@
       <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.45" />
     </filter>
   </defs>
+  <defs>
+    <radialGradient id="base9" cx="35%" cy="30%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="25%" stop-color="#fbf9d1" stop-opacity="0.95"/>
+      <stop offset="65%" stop-color="#f5d700" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#d4b000" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
   <g filter="url(#sh9)">
-    <circle cx="100" cy="100" r="84" fill="#f2f2f2" />
+    <circle cx="100" cy="100" r="84" fill="url(#base9)" />
     <!-- stripe -->
     <rect x="0" y="72" width="200" height="56" fill="#f5d700" />
-    <circle cx="100" cy="100" r="84" fill="none" stroke="rgba(0,0,0,0.06)" />
-    <circle cx="72" cy="68" r="22" fill="rgba(255,255,255,0.85)" />
+    <!-- soft highlight -->
+    <circle cx="72" cy="68" r="20" fill="rgba(255,255,255,0.9)" />
   </g>
   <g>
     <circle cx="100" cy="100" r="36" fill="#ffffff" stroke="#000" stroke-width="3" />
