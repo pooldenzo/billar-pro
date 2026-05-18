@@ -970,15 +970,21 @@ function startClock() {
 
 function mkBall(ball, clickFn) {
   const st  = BALL_STYLE[ball.id];
-  const el  = document.createElement('div');
+  const el  = document.createElement('button');
+  el.type = 'button';
   el.className = 'ball' + (st.stripe ? ' stripe' : '') + (ball.status === 'pocketed' ? ' pocketed' : '');
-  el.id        = 'b' + ball.id;
-  el.style.background = st.bg;
-  el.style.color      = st.color;
+  el.id = 'b' + ball.id;
+  // Load SVG files from docs/balls/ for all balls (9-15 have enhanced stripes)
+  el.style.backgroundImage = `url('./docs/balls/ball-${ball.id}.svg')`;
+  el.style.backgroundColor = st.bg;
+  el.style.color = st.color;
+  const numWrap = document.createElement('span');
+  numWrap.className = 'ball-num';
   const num = document.createElement('span');
-  num.className = 'ball-num';
+  num.className = 'num-badge';
   num.textContent = ball.id;
-  el.appendChild(num);
+  numWrap.appendChild(num);
+  el.appendChild(numWrap);
   if (clickFn) el.addEventListener('click', () => clickFn(ball.id));
   return el;
 }
