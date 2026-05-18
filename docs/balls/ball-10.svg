@@ -1,18 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
   <defs>
-    <radialGradient id="g10" cx="30%" cy="25%">
-      <stop offset="0%" stop-color="#fff" stop-opacity="0.95"/>
-      <stop offset="25%" stop-color="#d7f2ff" stop-opacity="0.6"/>
-      <stop offset="70%" stop-color="#1565c0" stop-opacity="1"/>
-      <stop offset="100%" stop-color="#0f4a8a" stop-opacity="1"/>
-    </radialGradient>
-    <filter id="sh10">
-      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.45" />
-    </filter>
+    <filter id="sh10"><feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#000" flood-opacity="0.55"/></filter>
   </defs>
   <g filter="url(#sh10)">
+    <!-- outer glossy ball -->
     <circle cx="100" cy="100" r="84" fill="#f2f2f2" />
-    <rect x="0" y="72" width="200" height="56" fill="#1565c0" />
+    <!-- stripe -->
+    <rect x="0" y="72" width="200" height="56" fill="#1565c0" rx="0" ry="0" />
+    <!-- subtle rim -->
+    <circle cx="100" cy="100" r="84" fill="none" stroke="rgba(0,0,0,0.06)" />
+    <!-- light spot -->
+    <circle cx="72" cy="68" r="22" fill="rgba(255,255,255,0.88)" />
   </g>
   <g>
     <circle cx="100" cy="100" r="36" fill="#ffffff" stroke="#000" stroke-width="3" />
