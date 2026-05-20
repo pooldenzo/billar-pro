@@ -1,0 +1,66 @@
+name: Deploy to GitHub Pages
+
+# Re-runs scripts/copy-web.ps1 on every push that affects the bundle,
+# then force-pushes the freshly built www/ directory to the gh-pages
+# branch. www/ is preferred over docs/ because it's the curated runtime
+# bundle (no dev assets like ballsstyle.jpg, example screenshots, etc.).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'billar.html'
+      - 'docs/**'
+      - 'scripts/copy-web.ps1'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+# One deploy at a time. Don't cancel in-flight runs — let them finish so
+# we never publish a half-built bundle.
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+# The default GITHUB_TOKEN needs write access to push gh-pages.
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Build Pages bundle (runs scripts/copy-web.ps1 via pwsh)
+        shell: pwsh
+        run: ./scripts/copy-web.ps1
+
+      - name: Stage www/ for gh-pages
+        run: |
+          set -euo pipefail
+          out=/tmp/gh-pages-out
+          rm -rf "$out"
+          mkdir -p "$out"
+          cp -r www/. "$out/"
+          # Drop a .nojekyll so Pages serves underscore-prefixed files verbatim
+          # (Jekyll would otherwise skip them — harmless safety net).
+          touch "$out/.nojekyll"
+          ls -la "$out"
+
+      - name: Force-push to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          cd /tmp/gh-pages-out
+          git init -q -b gh-pages
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -q -m "Deploy ${COMMIT_SHA::7} from main"
+          git push --force --quiet \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            gh-pages
+          echo "Deployed to https://pooldenzo.github.io/billar-pro/"
