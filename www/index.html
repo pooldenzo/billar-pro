@@ -5,6 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Billar Pro</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.svg">
+  <meta name="theme-color" content="#09100c">
   <style>
     :root {
       --felt:        #0d5c2e;
@@ -475,12 +478,12 @@
       <label class="field-label">Game Mode</label>
       <div class="mode-grid">
         <div class="mode-card selected" data-mode="standard" onclick="selectMode('standard')">
-          <div class="mc-icon"><img src="./docs/1.svg" alt="1" width="46" height="46"></div>
+          <div class="mc-icon"><img src="./1.svg" alt="1" width="46" height="46"></div>
           <div class="mc-name">Standard</div>
           <div class="mc-desc">Balls 1–15<br>120 pts · Win at 60.5</div>
         </div>
         <div class="mode-card" data-mode="from5" onclick="selectMode('from5')">
-          <div class="mc-icon"><img src="./docs/5.svg" alt="5" width="46" height="46"></div>
+          <div class="mc-icon"><img src="./5.svg" alt="5" width="46" height="46"></div>
           <div class="mc-name">From 5</div>
           <div class="mc-desc">Balls 5–15<br>110 pts · Win at 55.5</div>
         </div>
@@ -971,7 +974,7 @@ function mkBall(ball, clickFn) {
   el.className = 'ball' + (st.stripe ? ' stripe' : '') + (ball.status === 'pocketed' ? ' pocketed' : '');
   el.id = 'b' + ball.id;
   // Load SVG files from docs/balls/ for all balls (9-15 have enhanced stripes)
-  el.style.backgroundImage = `url('./docs/balls/ball-${ball.id}.svg')`;
+  el.style.backgroundImage = `url('./balls/ball-${ball.id}.svg')`;
   el.style.backgroundColor = st.bg;
   el.style.color = st.color;
   const numWrap = document.createElement('span');
