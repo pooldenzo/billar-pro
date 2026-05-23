@@ -1,4 +1,4 @@
-
+﻿
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -274,13 +274,9 @@
       overflow: hidden;
     }
     .ball:active { transform: scale(.84); }
-    .ball.stripe::before {
-      content: '';
-      position: absolute; left: 0; right: 0;
-      top: 32%; height: 36%;
-      background: rgba(255,255,255,.88);
-    }
+
     .ball-num { position: relative; z-index: 1; }
+    .num-badge { color: #111 !important; }
     .ball.pocketed {
       opacity: .18; cursor: default;
       pointer-events: none; box-shadow: none;
@@ -479,14 +475,14 @@
       <label class="field-label">Game Mode</label>
       <div class="mode-grid">
         <div class="mode-card selected" data-mode="standard" onclick="selectMode('standard')">
-          <div class="mc-icon">🎱</div>
+          <div class="mc-icon"><img src="./docs/1.svg" alt="1" width="46" height="46"></div>
           <div class="mc-name">Standard</div>
-          <div class="mc-desc">Balls 1–15<br>120 pts · Win at 61</div>
+          <div class="mc-desc">Balls 1–15<br>120 pts · Win at 60.5</div>
         </div>
         <div class="mode-card" data-mode="from5" onclick="selectMode('from5')">
-          <div class="mc-icon">5️⃣</div>
+          <div class="mc-icon"><img src="./docs/5.svg" alt="5" width="46" height="46"></div>
           <div class="mc-name">From 5</div>
-          <div class="mc-desc">Balls 5–15<br>110 pts · Win at 56</div>
+          <div class="mc-desc">Balls 5–15<br>110 pts · Win at 55.5</div>
         </div>
       </div>
     </div>
@@ -517,14 +513,14 @@
     <div class="player-panel" id="ppanel-0">
       <div class="panel-name" id="pname-0">Player 1</div>
       <div class="panel-score" id="pscore-0">0</div>
-      <div class="panel-threshold" id="pthresh-0">Win at 61</div>
+      <div class="panel-threshold" id="pthresh-0">Win at 60.5</div>
       <div class="panel-fouls"  id="pfouls-0"></div>
       <div class="turn-chip" id="pturn-0">▶ TURN</div>
     </div>
     <div class="player-panel" id="ppanel-1">
       <div class="panel-name" id="pname-1">Player 2</div>
       <div class="panel-score" id="pscore-1">0</div>
-      <div class="panel-threshold" id="pthresh-1">Win at 61</div>
+      <div class="panel-threshold" id="pthresh-1">Win at 60.5</div>
       <div class="panel-fouls"  id="pfouls-1"></div>
       <div class="turn-chip" id="pturn-1">▶ TURN</div>
     </div>
@@ -625,8 +621,8 @@
 ═══════════════════════════════════════════════════════════ */
 
 const MODES = {
-  standard: { balls: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], total: 120, threshold: 61, label: 'STANDARD · 120 PTS' },
-  from5:    { balls: [5,6,7,8,9,10,11,12,13,14,15],           total: 110, threshold: 56, label: 'FROM 5 · 110 PTS'   },
+  standard: { balls: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], total: 120, threshold: 60.5, label: 'STANDARD · 120 PTS' },
+  from5:    { balls: [5,6,7,8,9,10,11,12,13,14,15],           total: 110, threshold: 55.5, label: 'FROM 5 · 110 PTS'   },
 };
 
 const BALL_STYLE = {
@@ -692,7 +688,7 @@ class BilliardsEngine {
   // Final score after applying the pillo half-split (used only at end of match).
   // The full pillo balance is halved: the owing player loses that half, opponent gains it.
   effectiveScore(i) {
-    const half = Math.floor(Math.abs(this.foulBalance) / 2);
+    const half = Math.abs(this.foulBalance) / 2;
     if (this.foulBalance > 0) {
       // player 0 owes
       return i === 0
@@ -970,15 +966,21 @@ function startClock() {
 
 function mkBall(ball, clickFn) {
   const st  = BALL_STYLE[ball.id];
-  const el  = document.createElement('div');
+  const el  = document.createElement('button');
+  el.type = 'button';
   el.className = 'ball' + (st.stripe ? ' stripe' : '') + (ball.status === 'pocketed' ? ' pocketed' : '');
-  el.id        = 'b' + ball.id;
-  el.style.background = st.bg;
-  el.style.color      = st.color;
+  el.id = 'b' + ball.id;
+  // Load SVG files from docs/balls/ for all balls (9-15 have enhanced stripes)
+  el.style.backgroundImage = `url('./docs/balls/ball-${ball.id}.svg')`;
+  el.style.backgroundColor = st.bg;
+  el.style.color = st.color;
+  const numWrap = document.createElement('span');
+  numWrap.className = 'ball-num';
   const num = document.createElement('span');
-  num.className = 'ball-num';
+  num.className = 'num-badge';
   num.textContent = ball.id;
-  el.appendChild(num);
+  numWrap.appendChild(num);
+  el.appendChild(numWrap);
   if (clickFn) el.addEventListener('click', () => clickFn(ball.id));
   return el;
 }
@@ -1175,7 +1177,7 @@ function triggerWin() {
     c.className = 'win-card' + (i === s.winner ? ' winner' : '');
     const pilloAdj = p.score - p.ballScore; // positive = gained, negative = lost
     const pilloLine = p.foulDebt > 0
-      ? `Bolas: ${p.ballScore} − pillos: ${p.foulDebt}÷2 = −${p.foulDebt >> 1}`
+      ? `Bolas: ${p.ballScore} − pillos: ${p.foulDebt}÷2 = −${p.foulDebt / 2}`
       : pilloAdj > 0
       ? `Bolas: ${p.ballScore} + pillos oponente ÷2 = +${pilloAdj}`
       : `Bolas: ${p.ballScore}`;
@@ -1320,3 +1322,4 @@ function toast(msg, dur = 2600) {
 </script>
 </body>
 </html>
+
