@@ -696,9 +696,8 @@
     <div class="pd-stats">
       <div class="pd-stat"><div class="lbl">Time on table</div><div class="val" id="pd-time">0:00</div></div>
       <div class="pd-stat"><div class="lbl">Max in a row</div><div class="val" id="pd-maxrun">0</div><div class="sub">balls in one turn</div></div>
-      <div class="pd-stat"><div class="lbl">Score (balls)</div><div class="val" id="pd-score">0</div><div class="sub" id="pd-score-sub"></div></div>
-      <div class="pd-stat"><div class="lbl">Score (net)</div><div class="val" id="pd-score-net">0</div><div class="sub" id="pd-score-net-sub">after pillos</div></div>
-      <div class="pd-stat pd-stat-wide"><div class="lbl">Pillos / Fouls</div><div class="val" id="pd-fouls">0</div><div class="sub" id="pd-fouls-sub"></div></div>
+      <div class="pd-stat"><div class="lbl">Score</div><div class="val" id="pd-score-net">0</div><div class="sub" id="pd-score-sub"></div></div>
+      <div class="pd-stat"><div class="lbl">Pillos / Fouls</div><div class="val" id="pd-fouls">0</div><div class="sub" id="pd-fouls-sub"></div></div>
     </div>
     <div class="pd-section-title">Balls pocketed</div>
     <div class="pd-balls" id="pd-balls"></div>
@@ -1343,17 +1342,14 @@ function renderPlayerDetails(i) {
 
   document.getElementById('pd-time').textContent = fmtTime(engine.playerTime(i));
 
-  document.getElementById('pd-score').textContent = p.ballScore;
-  document.getElementById('pd-score-sub').textContent =
-    `${pocketed.length} ball${pocketed.length === 1 ? '' : 's'} pocketed`;
-
   const net = engine.effectiveScore(i);
   const delta = net - p.ballScore;
   document.getElementById('pd-score-net').textContent = net;
-  document.getElementById('pd-score-net-sub').textContent =
-    delta > 0 ? `+${delta} from opponent pillos` :
-    delta < 0 ? `${delta} pillos applied` :
-                `no pillo adjustment`;
+  const pilloPart =
+    delta > 0 ? ` · +${delta} pillos` :
+    delta < 0 ? ` · ${delta} pillos` :
+                '';
+  document.getElementById('pd-score-sub').textContent = `balls: ${p.ballScore}${pilloPart}`;
 
   document.getElementById('pd-fouls').textContent = p.fouls;
   document.getElementById('pd-fouls-sub').textContent =
@@ -1452,10 +1448,10 @@ function togglePause() {
 function syncUI() {
   if (!engine) return;
 
-  // Live score = ball score only (pillo adjustment applied only at end)
+  // Live score = effective score (raw balls ± pillo half-split applied live)
   [0, 1].forEach(i => {
     const scoreEl = document.getElementById('pscore-' + i);
-    scoreEl.textContent = engine.players[i].ballScore;
+    scoreEl.textContent = engine.effectiveScore(i);
     scoreEl.classList.toggle('match-point', engine.matchPointWho === i);
 
     const debt = engine.foulDebt(i);
