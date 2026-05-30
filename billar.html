@@ -228,6 +228,49 @@
     }
     .resign-btn:active { transform: scale(.88); background: rgba(229,68,68,.28); }
     .resign-btn:disabled { opacity: .3; pointer-events: none; }
+    .player-panel { cursor: pointer; }
+
+    /* Player details sheet */
+    .pd-stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-bottom: 18px;
+    }
+    .pd-stat {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 12px;
+    }
+    .pd-stat .lbl {
+      font-size: .62rem; letter-spacing: .5px;
+      text-transform: uppercase; color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .pd-stat .val {
+      font-size: 1.25rem; font-weight: 800; color: var(--text);
+      line-height: 1.1;
+    }
+    .pd-stat .sub {
+      font-size: .65rem; color: var(--text-muted); margin-top: 2px;
+    }
+    .pd-section-title {
+      font-size: .7rem; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text-muted);
+      margin: 6px 0 10px;
+    }
+    .pd-balls {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      justify-content: center; margin-bottom: 14px; min-height: 44px;
+    }
+    .pd-ball {
+      width: 38px; height: 38px; border-radius: 50%;
+      background-size: cover; background-position: center;
+      box-shadow: inset -3px -3px 6px rgba(0,0,0,.35),
+                  inset 3px 3px 6px rgba(255,255,255,.22),
+                  0 2px 4px rgba(0,0,0,.4);
+    }
+    .pd-empty {
+      font-size: .78rem; color: var(--text-muted);
+      text-align: center; padding: 12px 0;
+    }
 
     /* Stat bar */
     .stat-bar {
@@ -523,16 +566,16 @@
   </div>
 
   <div class="scoreboard">
-    <div class="player-panel" id="ppanel-0">
-      <button class="resign-btn" id="presign-0" onclick="doResign(0)" title="Resign">🏳️</button>
+    <div class="player-panel" id="ppanel-0" onclick="openPlayerDetails(0)">
+      <button class="resign-btn" id="presign-0" onclick="event.stopPropagation(); doResign(0)" title="Resign">🏳️</button>
       <div class="panel-name" id="pname-0">Player 1</div>
       <div class="panel-score" id="pscore-0">0</div>
       <div class="panel-threshold" id="pthresh-0">Win at 60.5</div>
       <div class="panel-fouls"  id="pfouls-0"></div>
       <div class="turn-chip" id="pturn-0">▶ TURN</div>
     </div>
-    <div class="player-panel" id="ppanel-1">
-      <button class="resign-btn" id="presign-1" onclick="doResign(1)" title="Resign">🏳️</button>
+    <div class="player-panel" id="ppanel-1" onclick="openPlayerDetails(1)">
+      <button class="resign-btn" id="presign-1" onclick="event.stopPropagation(); doResign(1)" title="Resign">🏳️</button>
       <div class="panel-name" id="pname-1">Player 2</div>
       <div class="panel-score" id="pscore-1">0</div>
       <div class="panel-threshold" id="pthresh-1">Win at 60.5</div>
@@ -597,6 +640,23 @@
     <div class="sheet-sub" id="foul-sub">Select the ball involved in the foul</div>
     <div class="foul-grid" id="foul-grid"></div>
     <button class="btn-cancel" onclick="closeFoul()">Cancel</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ PLAYER DETAILS ═══════════════════════ -->
+<div class="overlay" id="pd-overlay" onclick="closePlayerDetails()">
+  <div class="bottom-sheet" onclick="event.stopPropagation()">
+    <div class="sheet-title" id="pd-title" style="color:var(--gold-light)">Player</div>
+    <div class="sheet-sub" id="pd-sub">Match stats</div>
+    <div class="pd-stats">
+      <div class="pd-stat"><div class="lbl">Time on table</div><div class="val" id="pd-time">0:00</div></div>
+      <div class="pd-stat"><div class="lbl">Score</div><div class="val" id="pd-score">0</div><div class="sub" id="pd-score-sub"></div></div>
+      <div class="pd-stat"><div class="lbl">Pillos / Fouls</div><div class="val" id="pd-fouls">0</div><div class="sub" id="pd-fouls-sub"></div></div>
+      <div class="pd-stat"><div class="lbl">Max in a row</div><div class="val" id="pd-maxrun">0</div><div class="sub">balls in one turn</div></div>
+    </div>
+    <div class="pd-section-title">Balls pocketed</div>
+    <div class="pd-balls" id="pd-balls"></div>
+    <button class="btn-cancel" onclick="closePlayerDetails()">Close</button>
   </div>
 </div>
 
@@ -690,6 +750,26 @@ class BilliardsEngine {
     this._undo           = [];
     this._redo           = [];
     this.startTime       = Date.now();
+
+    // Per-player wall-clock time (accumulated when turn changes).
+    // Not part of game-state snapshot — time keeps moving forward even on undo.
+    this.timeSpent       = [0, 0];
+    this._turnStart      = Date.now();
+
+    // Run tracking: currentRun = consecutive pockets by the active player.
+    // maxRun[i] = best streak for player i so far.
+    this.currentRun      = 0;
+    this.maxRun          = [0, 0];
+  }
+
+  _accumulateTime() {
+    const now = Date.now();
+    this.timeSpent[this.currentPlayer] += now - this._turnStart;
+    this._turnStart = now;
+  }
+
+  playerTime(i) {
+    return this.timeSpent[i] + (i === this.currentPlayer && this.status !== 'won' ? Date.now() - this._turnStart : 0);
   }
 
   /* ── derived ── */
@@ -738,6 +818,7 @@ class BilliardsEngine {
       currentPlayer: this.currentPlayer, status: this.status,
       winner: this.winner, matchPointWho: this.matchPointWho,
       actions: this.actions,
+      currentRun: this.currentRun, maxRun: this.maxRun,
     }));
   }
   _restore(s) {
@@ -745,7 +826,8 @@ class BilliardsEngine {
        foulBalance: this.foulBalance,
        currentPlayer: this.currentPlayer, status: this.status,
        winner: this.winner, matchPointWho: this.matchPointWho,
-       actions: this.actions } = s);
+       actions: this.actions,
+       currentRun: this.currentRun, maxRun: this.maxRun } = s);
   }
 
   /* ── win evaluator — called after EVERY mutation ── */
@@ -787,6 +869,11 @@ class BilliardsEngine {
     ball.pocketedBy = this.currentPlayer;
     this.players[this.currentPlayer].ballScore += ball.value;
 
+    this.currentRun++;
+    if (this.currentRun > this.maxRun[this.currentPlayer]) {
+      this.maxRun[this.currentPlayer] = this.currentRun;
+    }
+
     this.actions.push({
       type: 'pocket', player: this.currentPlayer,
       name: this.players[this.currentPlayer].name,
@@ -813,7 +900,9 @@ class BilliardsEngine {
 
     this.players[offender].fouls++;
     // Ball stays on table; turn passes to opponent.
+    this._accumulateTime();
     this.currentPlayer = 1 - offender;
+    this.currentRun = 0;
 
     this.actions.push({
       type: 'foul', player: offender,
@@ -827,7 +916,9 @@ class BilliardsEngine {
   }
 
   switchTurn() {
+    this._accumulateTime();
     this.currentPlayer = 1 - this.currentPlayer;
+    this.currentRun = 0;
   }
 
   resign(playerIdx) {
@@ -837,6 +928,7 @@ class BilliardsEngine {
     this._undo.push(this._snap());
     this._redo = [];
 
+    this._accumulateTime();
     const opponent = 1 - playerIdx;
     this.status = 'won';
     this.winner = opponent;
@@ -853,15 +945,19 @@ class BilliardsEngine {
 
   undo() {
     if (!this.canUndo()) return { error: 'Nothing to undo' };
+    this._accumulateTime();
     this._redo.push(this._snap());
     this._restore(this._undo.pop());
+    this._turnStart = Date.now();
     return { ok: true };
   }
 
   redo() {
     if (!this.canRedo()) return { error: 'Nothing to redo' };
+    this._accumulateTime();
     this._undo.push(this._snap());
     this._restore(this._redo.pop());
+    this._turnStart = Date.now();
     return { ok: true };
   }
 
@@ -939,6 +1035,7 @@ function vib(p) { try { navigator.vibrate(p); } catch {} }
 let engine       = null;
 let selMode      = 'standard';
 let foulFor      = null;          // player index or null
+let pdOpenFor    = null;          // player index when details sheet is open, else null
 let timer        = null;
 let histPrevScr  = 'setup';
 
@@ -993,6 +1090,7 @@ function startClock() {
     const e = Date.now() - engine.startTime;
     const m = Math.floor(e / 60000), s = Math.floor((e % 60000) / 1000);
     document.getElementById('sb-time').textContent = `${m}:${String(s).padStart(2,'0')}`;
+    if (pdOpenFor !== null) renderPlayerDetails(pdOpenFor);
   }, 1000);
 }
 
@@ -1119,6 +1217,71 @@ function closeFoul() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   PLAYER DETAILS
+═══════════════════════════════════════════════════════════ */
+
+function openPlayerDetails(i) {
+  if (!engine) return;
+  pdOpenFor = i;
+  renderPlayerDetails(i);
+  document.getElementById('pd-overlay').classList.add('show');
+}
+
+function closePlayerDetails() {
+  pdOpenFor = null;
+  document.getElementById('pd-overlay').classList.remove('show');
+}
+
+function fmtTime(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(total / 60), s = total % 60;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function renderPlayerDetails(i) {
+  if (!engine) return;
+  const p = engine.players[i];
+  const pocketed = engine.balls.filter(b => b.pocketedBy === i);
+  const debt = engine.foulDebt(i);
+
+  document.getElementById('pd-title').textContent = p.name;
+  document.getElementById('pd-sub').textContent =
+    engine.currentPlayer === i && engine.status !== 'won' ? 'Currently at the table' : 'Match stats';
+
+  document.getElementById('pd-time').textContent = fmtTime(engine.playerTime(i));
+
+  document.getElementById('pd-score').textContent = p.ballScore;
+  document.getElementById('pd-score-sub').textContent =
+    `${pocketed.length} ball${pocketed.length === 1 ? '' : 's'} pocketed`;
+
+  document.getElementById('pd-fouls').textContent = p.fouls;
+  document.getElementById('pd-fouls-sub').textContent =
+    debt > 0 ? `${debt} pts owed (pillo)` : 'no debt';
+
+  document.getElementById('pd-maxrun').textContent = engine.maxRun[i];
+
+  const ballsEl = document.getElementById('pd-balls');
+  ballsEl.innerHTML = '';
+  if (pocketed.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'pd-empty';
+    empty.textContent = 'No balls pocketed yet';
+    ballsEl.appendChild(empty);
+  } else {
+    pocketed
+      .slice()
+      .sort((a, b) => a.id - b.id)
+      .forEach(b => {
+        const el = document.createElement('div');
+        el.className = 'pd-ball';
+        el.style.backgroundImage = `url('./docs/balls/ball-${b.id}.svg')`;
+        el.title = `Ball ${b.id} (${b.value} pts)`;
+        ballsEl.appendChild(el);
+      });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
    SWITCH / UNDO / REDO
 ═══════════════════════════════════════════════════════════ */
 
@@ -1204,6 +1367,9 @@ function syncUI() {
 
   // Refresh ball visuals
   refreshBalls();
+
+  // Live-refresh open player details sheet
+  if (pdOpenFor !== null) renderPlayerDetails(pdOpenFor);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1212,6 +1378,7 @@ function syncUI() {
 
 function triggerWin() {
   if (timer) clearInterval(timer);
+  closePlayerDetails();
   sfxWin(); vib([80,40,80,40,160]);
 
   const s = engine.summary();
@@ -1276,6 +1443,7 @@ function confetti() {
 function newMatch() {
   if (timer) clearInterval(timer);
   engine = null;
+  closePlayerDetails();
   show('screen-setup');
 }
 
