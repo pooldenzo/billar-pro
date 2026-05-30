@@ -909,6 +909,9 @@ class BilliardsEngine {
       const s0 = this.effectiveScore(0), s1 = this.effectiveScore(1);
       // Need at least one player at/above threshold to declare a winner.
       if (s0 >= this.cfg.threshold || s1 >= this.cfg.threshold) {
+        // Lock in the active player's accumulated time before the match closes —
+        // otherwise a player who runs the table without ever switching shows 0:00.
+        this._accumulateTime();
         this.status = 'won';
         this.winner = s0 >= s1 ? 0 : 1;
         return;
