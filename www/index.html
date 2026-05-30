@@ -270,6 +270,35 @@
       text-align: center; padding: 12px 0;
     }
 
+    /* Pause overlay */
+    .pause-overlay {
+      background: rgba(8,12,10,.94);
+      backdrop-filter: blur(4px);
+      justify-content: center; align-items: center;
+      z-index: 300;
+    }
+    .pause-card {
+      text-align: center; color: var(--text);
+      animation: pauseIn .25s ease;
+    }
+    @keyframes pauseIn {
+      from { opacity: 0; transform: scale(.92); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .pause-icon {
+      font-size: 4.4rem; color: var(--gold-light);
+      margin-bottom: 6px; line-height: 1;
+    }
+    .pause-title {
+      font-size: 2rem; font-weight: 900;
+      letter-spacing: 6px; color: var(--gold-light);
+      margin-bottom: 10px;
+    }
+    .pause-sub {
+      font-size: .8rem; color: var(--text-muted);
+      letter-spacing: 1.5px; text-transform: uppercase;
+    }
+
     /* Stat bar */
     .stat-bar {
       background: var(--surface); display: flex;
@@ -559,6 +588,7 @@
     <div style="display:flex;gap:6px">
       <button class="icon-btn" id="btn-undo" onclick="doUndo()" title="Undo">↩</button>
       <button class="icon-btn" id="btn-redo" onclick="doRedo()" title="Redo">↪</button>
+      <button class="icon-btn" id="btn-pause" onclick="togglePause()" title="Pause">⏸</button>
       <button class="icon-btn" onclick="toggleTheme()" title="Theme">🌙</button>
     </div>
   </div>
@@ -662,6 +692,15 @@
   </div>
 </div>
 
+<!-- ═══════════════════════ PAUSE OVERLAY ═══════════════════════ -->
+<div class="overlay pause-overlay" id="pause-overlay" onclick="togglePause()">
+  <div class="pause-card">
+    <div class="pause-icon">⏸</div>
+    <div class="pause-title">PAUSED</div>
+    <div class="pause-sub">Tap anywhere to resume</div>
+  </div>
+</div>
+
 <!-- ═══════════════════════ WIN SCREEN ═══════════════════════ -->
 <div id="screen-win" class="screen">
   <div class="confetti-wrap" id="confetti"></div>
@@ -762,16 +801,45 @@ class BilliardsEngine {
     // maxRun[i] = best streak for player i so far.
     this.currentRun      = 0;
     this.maxRun          = [0, 0];
+
+    // Pause state — wall-clock concept, not part of snapshots.
+    this.paused          = false;
+    this._pausedAt       = null;
+    this.pausedTotal     = 0;
   }
 
   _accumulateTime() {
+    if (this.paused) return;
     const now = Date.now();
     this.timeSpent[this.currentPlayer] += now - this._turnStart;
     this._turnStart = now;
   }
 
   playerTime(i) {
-    return this.timeSpent[i] + (i === this.currentPlayer && this.status !== 'won' ? Date.now() - this._turnStart : 0);
+    const live = i === this.currentPlayer && this.status !== 'won' && !this.paused;
+    return this.timeSpent[i] + (live ? Date.now() - this._turnStart : 0);
+  }
+
+  matchElapsed() {
+    const live = this.paused ? this._pausedAt : Date.now();
+    return live - this.startTime - this.pausedTotal;
+  }
+
+  pause() {
+    if (this.paused || this.status === 'won') return { error: 'cannot pause' };
+    this._accumulateTime();
+    this.paused = true;
+    this._pausedAt = Date.now();
+    return { ok: true };
+  }
+
+  resume() {
+    if (!this.paused) return { error: 'not paused' };
+    this.pausedTotal += Date.now() - this._pausedAt;
+    this._pausedAt = null;
+    this._turnStart = Date.now();
+    this.paused = false;
+    return { ok: true };
   }
 
   /* ── derived ── */
@@ -860,6 +928,7 @@ class BilliardsEngine {
 
   pocketBall(ballId) {
     if (this.status === 'won') return { error: 'Match is over' };
+    if (this.paused) return { error: 'Match is paused' };
     const ball = this.balls.find(b => b.id === ballId);
     if (!ball)                          return { error: 'Ball not found' };
     if (ball.status !== 'available')    return { error: 'Ball already pocketed' };
@@ -888,6 +957,7 @@ class BilliardsEngine {
 
   declareFoul(ballId, offender) {
     if (this.status === 'won') return { error: 'Match is over' };
+    if (this.paused) return { error: 'Match is paused' };
     const ball = this.balls.find(b => b.id === ballId);
     if (!ball)                       return { error: 'Ball not found' };
     if (ball.status !== 'available') return { error: 'Ball already pocketed' };
@@ -918,6 +988,7 @@ class BilliardsEngine {
   }
 
   switchTurn() {
+    if (this.paused || this.status === 'won') return;
     this._accumulateTime();
     this.currentPlayer = 1 - this.currentPlayer;
     this.currentRun = 0;
@@ -925,6 +996,7 @@ class BilliardsEngine {
 
   resign(playerIdx) {
     if (this.status === 'won') return { error: 'Match is over' };
+    if (this.paused) return { error: 'Match is paused' };
     if (playerIdx !== 0 && playerIdx !== 1) return { error: 'Invalid player' };
 
     this._undo.push(this._snap());
@@ -947,6 +1019,7 @@ class BilliardsEngine {
 
   undo() {
     if (!this.canUndo()) return { error: 'Nothing to undo' };
+    if (this.paused) return { error: 'Match is paused' };
     this._accumulateTime();
     this._redo.push(this._snap());
     this._restore(this._undo.pop());
@@ -956,6 +1029,7 @@ class BilliardsEngine {
 
   redo() {
     if (!this.canRedo()) return { error: 'Nothing to redo' };
+    if (this.paused) return { error: 'Match is paused' };
     this._accumulateTime();
     this._undo.push(this._snap());
     this._restore(this._redo.pop());
@@ -1089,7 +1163,7 @@ function startClock() {
   if (timer) clearInterval(timer);
   timer = setInterval(() => {
     if (!engine) return;
-    const e = Date.now() - engine.startTime;
+    const e = engine.matchElapsed();
     const m = Math.floor(e / 60000), s = Math.floor((e % 60000) / 1000);
     document.getElementById('sb-time').textContent = `${m}:${String(s).padStart(2,'0')}`;
     if (pdOpenFor !== null) renderPlayerDetails(pdOpenFor);
@@ -1331,6 +1405,21 @@ function doResign(playerIdx) {
   triggerWin();
 }
 
+function togglePause() {
+  if (!engine || engine.status === 'won') return;
+  if (engine.paused) {
+    engine.resume();
+    vib(20);
+  } else {
+    closePlayerDetails();
+    closeFoul();
+    engine.pause();
+    vib([20, 30, 20]);
+  }
+  document.getElementById('pause-overlay').classList.toggle('show', engine.paused);
+  syncUI();
+}
+
 /* ═══════════════════════════════════════════════════════════
    SYNC UI
 ═══════════════════════════════════════════════════════════ */
@@ -1376,6 +1465,11 @@ function syncUI() {
   // Undo/Redo button states
   document.getElementById('btn-undo').classList.toggle('disabled', !engine.canUndo());
   document.getElementById('btn-redo').classList.toggle('disabled', !engine.canRedo());
+
+  // Pause button icon
+  const pauseBtn = document.getElementById('btn-pause');
+  pauseBtn.textContent = engine.paused ? '▶' : '⏸';
+  pauseBtn.title = engine.paused ? 'Resume' : 'Pause';
 
   // Refresh ball visuals
   refreshBalls();
@@ -1458,6 +1552,7 @@ function newMatch() {
   if (timer) clearInterval(timer);
   engine = null;
   closePlayerDetails();
+  document.getElementById('pause-overlay').classList.remove('show');
   show('screen-setup');
 }
 
