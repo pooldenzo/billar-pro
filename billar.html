@@ -737,8 +737,8 @@ class BilliardsEngine {
   _evalWin() {
     if (this.status === 'won') return;
 
-    if (this.remainingBalls <= 1) {
-      // Game is ending — apply pillo half-split and find winner by effective score.
+    if (this.remainingBalls === 0) {
+      // All balls pocketed — apply pillo half-split and find winner by effective score.
       const s0 = this.effectiveScore(0), s1 = this.effectiveScore(1);
       // Need at least one player at/above threshold to declare a winner.
       if (s0 >= this.cfg.threshold || s1 >= this.cfg.threshold) {
