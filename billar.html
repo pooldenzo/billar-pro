@@ -215,6 +215,19 @@
       visibility: hidden;
     }
     .turn-chip.show { visibility: visible; }
+    .resign-btn {
+      position: absolute; top: 6px; right: 6px;
+      width: 26px; height: 26px;
+      background: rgba(229,68,68,.15);
+      border: 1px solid rgba(229,68,68,.35);
+      color: #ff8888; border-radius: 8px;
+      font-size: .85rem; line-height: 1;
+      cursor: pointer; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .resign-btn:active { transform: scale(.88); background: rgba(229,68,68,.28); }
+    .resign-btn:disabled { opacity: .3; pointer-events: none; }
 
     /* Stat bar */
     .stat-bar {
@@ -511,6 +524,7 @@
 
   <div class="scoreboard">
     <div class="player-panel" id="ppanel-0">
+      <button class="resign-btn" id="presign-0" onclick="doResign(0)" title="Resign">🏳️</button>
       <div class="panel-name" id="pname-0">Player 1</div>
       <div class="panel-score" id="pscore-0">0</div>
       <div class="panel-threshold" id="pthresh-0">Win at 60.5</div>
@@ -518,6 +532,7 @@
       <div class="turn-chip" id="pturn-0">▶ TURN</div>
     </div>
     <div class="player-panel" id="ppanel-1">
+      <button class="resign-btn" id="presign-1" onclick="doResign(1)" title="Resign">🏳️</button>
       <div class="panel-name" id="pname-1">Player 2</div>
       <div class="panel-score" id="pscore-1">0</div>
       <div class="panel-threshold" id="pthresh-1">Win at 60.5</div>
@@ -815,6 +830,27 @@ class BilliardsEngine {
     this.currentPlayer = 1 - this.currentPlayer;
   }
 
+  resign(playerIdx) {
+    if (this.status === 'won') return { error: 'Match is over' };
+    if (playerIdx !== 0 && playerIdx !== 1) return { error: 'Invalid player' };
+
+    this._undo.push(this._snap());
+    this._redo = [];
+
+    const opponent = 1 - playerIdx;
+    this.status = 'won';
+    this.winner = opponent;
+    this.matchPointWho = null;
+
+    this.actions.push({
+      type: 'resign', player: playerIdx,
+      name: this.players[playerIdx].name,
+      ts: Date.now(),
+    });
+
+    return { ok: true, winner: opponent };
+  }
+
   undo() {
     if (!this.canUndo()) return { error: 'Nothing to undo' };
     this._redo.push(this._snap());
@@ -1109,6 +1145,17 @@ function doRedo() {
   buildBallGrid(); syncUI();
 }
 
+function doResign(playerIdx) {
+  if (!engine || engine.status === 'won') return;
+  const name = engine.players[playerIdx].name;
+  if (!confirm(`${name} resigns the match?\nThe opponent wins.`)) return;
+  const r = engine.resign(playerIdx);
+  if (r.error) { toast(r.error); return; }
+  vib([60, 30, 60]);
+  syncUI();
+  triggerWin();
+}
+
 /* ═══════════════════════════════════════════════════════════
    SYNC UI
 ═══════════════════════════════════════════════════════════ */
@@ -1134,12 +1181,14 @@ function syncUI() {
   });
 
   // Active turn + foul button state
+  const matchOver = engine.status === 'won';
   [0,1].forEach(i => {
     const isActive = engine.currentPlayer === i;
     document.getElementById('ppanel-' + i).classList.toggle('active-turn', isActive);
     document.getElementById('pturn-' + i).classList.toggle('show', isActive);
     document.getElementById('btn-foul-' + i).style.opacity = isActive ? '1' : '0.35';
     document.getElementById('btn-foul-' + i).style.pointerEvents = isActive ? '' : 'none';
+    document.getElementById('presign-' + i).disabled = matchOver;
   });
 
   // Stat bar
