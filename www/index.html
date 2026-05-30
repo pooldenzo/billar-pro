@@ -67,7 +67,7 @@
     /* ────────────────────────────── SETUP ─── */
     .setup-hero {
       background: linear-gradient(160deg, var(--felt-dark) 0%, var(--felt) 100%);
-      padding: 48px 24px 36px;
+      padding: 20px 24px 24px;
       text-align: center;
       position: relative;
       overflow: hidden;
@@ -77,15 +77,30 @@
       position: absolute; inset: 0;
       background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.06), transparent 70%);
     }
-    .hero-ball { font-size: 3.2rem; margin-bottom: 10px; display: block; }
     .setup-hero h1 {
-      font-size: 2.2rem; font-weight: 900;
-      letter-spacing: 3px; color: var(--gold-light);
+      font-size: 2.6rem; font-weight: 900;
+      letter-spacing: 2px; color: var(--gold-light);
       text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+      line-height: 1;
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 2px;
+    }
+    .setup-hero h1 .hero-o {
+      font-size: 2.4rem;
+      line-height: 1;
+      display: inline-block;
+      transform: translateY(2px);
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,.5));
+    }
+    .setup-hero .hero-sub {
+      color: rgba(255,255,255,.55);
+      font-size: 1rem; font-weight: 600;
+      letter-spacing: 6px; text-transform: uppercase;
+      margin-top: 2px;
     }
     .setup-hero .tagline {
       color: rgba(255,255,255,0.5);
-      font-size: .8rem; margin-top: 5px; letter-spacing: .5px;
+      font-size: .75rem; margin-top: 8px; letter-spacing: .5px;
     }
 
     .setup-body { padding: 24px; display: flex; flex-direction: column; gap: 22px; }
@@ -543,8 +558,8 @@
 <!-- ═══════════════════════ SETUP ═══════════════════════ -->
 <div id="screen-setup" class="screen active">
   <div class="setup-hero">
-    <span class="hero-ball">🎱</span>
-    <h1>BILLAR PRO</h1>
+    <h1>ENZ<span class="hero-o">🎱</span></h1>
+    <div class="hero-sub">billar</div>
     <p class="tagline">Professional Pool Scorekeeping</p>
   </div>
 
